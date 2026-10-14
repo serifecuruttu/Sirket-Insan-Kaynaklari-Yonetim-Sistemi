@@ -98,5 +98,9 @@
   <ItemGroup>
     <None Include="Resources\Ekran görüntüsü 2026-10-13 203331.png" />
   </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="database\insanKaynaklari.sql" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

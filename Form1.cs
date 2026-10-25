@@ -14,8 +14,8 @@ namespace insanKaynaklariYonetimSistemi
     public partial class FrmGiris : Form
     {
 
-        SqlConnection baglanti = new SqlConnection(
-        "Server=.;Database= insanKaynaklariDB;Trusted_Connection=True;");
+        SqlConnection baglanti = VeriTabani.BaglantiOlustur();
+
         public FrmGiris()
         {
             InitializeComponent();
@@ -23,30 +23,77 @@ namespace insanKaynaklariYonetimSistemi
 
         private void btnGiris_Click(object sender, EventArgs e)
         {
-            baglanti.Open();
-
-            SqlCommand komut = new SqlCommand(
-                "SELECT * FROM KuLLanicilar WHERE KullaniciAdi =@KullaniciAdi AND Sifre=@Sifre", baglanti);
-            komut.Parameters.AddWithValue("@KullaniciAdi", txtKullaniciAdi.Text);
-            komut.Parameters.AddWithValue("@Sifre", txtSifre.Text);
-
-            SqlDataReader dr = komut.ExecuteReader();
-
-            if (dr.Read())
-            { 
-                MessageBox.Show("Giriş Başarılı!");
-                FrmAnaMenu frm = new FrmAnaMenu();
-                frm.Show();
-                this.Hide();
-            }
-            else
+            using (SqlConnection baglanti = VeriTabanı.BaglantiOlustur())
             {
-                MessageBox.Show("Kullanıcı Adı veya Şifre Hatalı!");
-                txtSifre.Clear();
-                txtSifre.Focus();
+                baglanti.Open();
+
+                string sorgu = @"
+            SELECT KullaniciID, SifreHash, Rol, Durum, IlkGirisMi
+            FROM Kullanicilar
+            WHERE KullaniciAdi = @KullaniciAdi";
+
+                using (SqlCommand komut = new SqlCommand(sorgu, baglanti))
+                {
+                    komut.Parameters.AddWithValue(
+                        "@KullaniciAdi", txtKullaniciAdi.Text.Trim());
+
+                    using (SqlDataReader dr = komut.ExecuteReader())
+                    {
+                        if (!dr.Read())
+                        {
+                            MessageBox.Show("Kullanıcı adı veya şifre hatalı.");
+                            return;
+                        }
+
+                        int kullaniciID = Convert.ToInt32(dr["KullaniciID"]);
+                        string sifreHash = dr["SifreHash"].ToString();
+                        string rol = dr["Rol"].ToString();
+                        bool aktif = Convert.ToBoolean(dr["Durum"]);
+                        bool ilkGiris = Convert.ToBoolean(dr["IlkGirisMi"]);
+
+                        if (!aktif)
+                        {
+                            MessageBox.Show("Hesabınız aktif değil.");
+                            return;
+                        }
+
+                        if (ilkGiris && sifreHash == "GECICI")
+                        {
+                            dr.Close();
+
+                            FrmSifreBelirle frm =
+                                new FrmSifreBelirle(kullaniciID);
+
+                            frm.ShowDialog();
+                            return;
+                        }
+
+                        if (ilkGiris)
+                        {
+                            MessageBox.Show("Önce şifrenizi belirlemelisiniz.");
+                            return;
+                        }
+
+                        string girilenSifre = txtSifre.Text;
+
+                        if (!BCrypt.Net.BCrypt.Verify(girilenSifre, sifreHash))
+                        {
+                            MessageBox.Show("Kullanıcı adı veya şifre hatalı.");
+                            return;
+                        }
+
+                        Oturum.KullaniciID = kullaniciID;
+                        Oturum.KullaniciAdi = txtKullaniciAdi.Text.Trim();
+                        Oturum.Rol = rol;
+                    }
+                }
             }
-            
-            baglanti.Close();
+
+            MessageBox.Show("Giriş başarılı!");
+
+            FrmAnaMenu anaMenu = new FrmAnaMenu();
+            anaMenu.Show();
+            this.Hide();
         }
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e)

@@ -256,6 +256,7 @@
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.pictureBox1);
             this.Name = "FrmGiris";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "İK Yönetim Sistemi";
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
